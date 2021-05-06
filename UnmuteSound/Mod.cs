@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Harmony;
+﻿using Harmony;
 using MelonLoader;
 using System.Linq;
 using System.Reflection;
