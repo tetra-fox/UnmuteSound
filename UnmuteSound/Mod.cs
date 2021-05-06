@@ -10,16 +10,17 @@ namespace UnmuteSound
     {
         public const string Name = "UnmuteSound";
         public const string Author = "tetra";
-        public const string Version = "1.0.1";
-        public const string DownloadLink = "https://github.com/tetra-fox/UnmuteSound/releases/download/1.0.1/UnmuteSound.dll";
+        public const string Version = "1.0.2";
+        public const string DownloadLink = "https://github.com/tetra-fox/UnmuteSound/releases/download/1.0.2/UnmuteSound.dll";
     }
 
     public class Mod : MelonMod
     {
         private static HarmonyInstance _harmony;
-        public static AudioSource UnmuteBlop;
+        private static AudioSource _unmuteBlop;
 
         private static bool _wasUnmuted;
+        private static bool _joiningRoom = true;
 
         public override void VRChat_OnUiManagerInit()
         {
@@ -42,15 +43,16 @@ namespace UnmuteSound
             AudioClip Blop = GameObject.Find("UserInterface/UnscaledUI/HudContent/Hud/VoiceDotParent")
                 .GetComponent<HudVoiceIndicator>().field_Public_AudioClip_0;
 
-            UnmuteBlop = GameObject.Find("UserInterface/UnscaledUI/HudContent/Hud/VoiceDotParent")
+            _unmuteBlop = GameObject.Find("UserInterface/UnscaledUI/HudContent/Hud/VoiceDotParent")
                 .AddComponent<AudioSource>();
 
-            UnmuteBlop.clip = Blop;
-            UnmuteBlop.playOnAwake = false;
-            UnmuteBlop.pitch = 1.2f;
+            _unmuteBlop.clip = Blop;
+            _unmuteBlop.playOnAwake = false;
+            _unmuteBlop.pitch = 1.2f;
 
+            // thanks knah https://github.com/knah/VRCMods/blob/142dab764543a17ab10092ec684bf7cf19e72683/JoinNotifier/JoinNotifierMod.cs#L64-L70
             VRCAudioManager audioManager = VRCAudioManager.field_Private_Static_VRCAudioManager_0;
-            UnmuteBlop.outputAudioMixerGroup = new[]
+            _unmuteBlop.outputAudioMixerGroup = new[]
             {
                 audioManager.field_Public_AudioMixerGroup_0,
                 audioManager.field_Public_AudioMixerGroup_1,
@@ -65,10 +67,22 @@ namespace UnmuteSound
         {
             // __0 true on mute
             if (__0) _wasUnmuted = false;
-            if (__0 || _wasUnmuted) return true;
-            UnmuteBlop.Play();
+            if (__0 || _wasUnmuted || _joiningRoom) return true;
+            _unmuteBlop.Play();
             _wasUnmuted = true;
             return true;
+        }
+
+        [HarmonyPatch(typeof(NetworkManager), "OnJoinedRoom")]
+        private class OnJoinedRoomPatch
+        {
+            private static void Prefix() => _joiningRoom = false;
+        }
+
+        [HarmonyPatch(typeof(NetworkManager), "OnLeftRoom")]
+        private class OnLeftRoomPatch
+        {
+            private static void Prefix() => _joiningRoom = true;
         }
     }
 }
